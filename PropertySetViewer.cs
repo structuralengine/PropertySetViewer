@@ -111,6 +111,11 @@ namespace PropertySetViewer
                                 case 5: return "施工時間";
                                 case 6: return "区間開始深さ";
                                 case 7: return "区間終了深さ";
+                                case 8: return "施工実績x";
+                                case 9: return "施工実績y";
+                                case 10: return "設計統芯位置x";
+                                case 11: return "設計統芯位置y";
+                                case 1001: return "施工データ";
                                 default: return $"プロパティ{typeCode}";
                             }
                         }
