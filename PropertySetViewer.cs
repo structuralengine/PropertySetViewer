@@ -3,6 +3,9 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Civil.DatabaseServices;
+using Autodesk.Civil.Land.DatabaseServices;
+using Autodesk.Civil.ApplicationServices;
+using Autodesk.Civil.Settings;
 using System.Collections.Generic;
 using System.Xml.Linq;
 
@@ -33,7 +36,7 @@ namespace PropertySetViewer
                 // データベーストランザクションの開始
                 using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
                 {
-                    Entity entity = tr.GetObject(entityResult.ObjectId, OpenMode.ForRead) as Entity;
+                    Autodesk.AutoCAD.DatabaseServices.Entity entity = tr.GetObject(entityResult.ObjectId, OpenMode.ForRead) as Autodesk.AutoCAD.DatabaseServices.Entity;
                     if (entity != null)
                     {
                         List<string> dataList = new List<string>();
@@ -71,7 +74,7 @@ namespace PropertySetViewer
                                 {
                                     foreach (DBDictionaryEntry entry in extDict)
                                     {
-                                        using (DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                                        using (Autodesk.AutoCAD.DatabaseServices.DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
                                         {
                                             dataFound = true;
                                             dataList.Add($"拡張辞書エントリ: {entry.Key}");
