@@ -1,11 +1,9 @@
-﻿using Autodesk.AutoCAD.ApplicationServices;
+using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
-using Autodesk.Civil.DatabaseServices;
-using Autodesk.Civil.ApplicationServices;
+using System;
 using System.Collections.Generic;
-using System.Xml.Linq;
 
 [assembly: CommandClass(typeof(PropertySetViewer.PropertySetViewer))]
 
@@ -40,27 +38,7 @@ namespace PropertySetViewer
                         List<string> dataList = new List<string>();
                         bool dataFound = false;
 
-                        // Civil3D のプロパティセットを確認
-                        if (Autodesk.Civil.DatabaseServices.PropertySetManager.HasPropertySets(entity))
-                        {
-                            var propertySets = Autodesk.Civil.DatabaseServices.PropertySetManager.GetAllPropertySets(entity);
-                            foreach (var propertySet in propertySets)
-                            {
-                                // 特定のプロパティセットを探す
-                                if (propertySet.PropertySetDefinitionName == "施工情報(一覧表)" ||
-                                    propertySet.PropertySetDefinitionName == "施工情報(個別)")
-                                {
-                                    dataFound = true;
-                                    dataList.Add($"プロパティセット: {propertySet.PropertySetDefinitionName}");
-                                    foreach (var definition in propertySet.Definitions)
-                                    {
-                                        var value = propertySet.GetPropertyValue(definition);
-                                        dataList.Add($"  {definition.Name}: {value}");
-                                    }
-                                    dataList.Add(""); // 空行を追加して見やすくする
-                                }
-                            }
-                        }
+                        // PLACEHOLDER: Variable declarations for dataList and dataFound remain unchanged
 
                         // 拡張辞書を確認
                         ObjectId extDictId = entity.ExtensionDictionary;
@@ -70,20 +48,28 @@ namespace PropertySetViewer
                             {
                                 if (extDict != null)
                                 {
+                                    // 特定のプロパティセット名を定義
+                                    string[] propertySetNames = new string[] { "施工情報(一覧表)", "施工情報(個別)" };
+
                                     foreach (DBDictionaryEntry entry in extDict)
                                     {
-                                        using (Autodesk.AutoCAD.DatabaseServices.DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                                        // プロパティセット名が一致する場合のみ処理
+                                        if (propertySetNames.Contains(entry.Key))
                                         {
-                                            dataFound = true;
-                                            dataList.Add($"拡張辞書エントリ: {entry.Key}");
-                                            if (obj is Xrecord xrec)
+                                            using (Autodesk.AutoCAD.DatabaseServices.DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
                                             {
-                                                foreach (TypedValue value in xrec.Data)
+                                                dataFound = true;
+                                                dataList.Add($"プロパティセット: {entry.Key}");
+                                                if (obj is Xrecord xrec)
                                                 {
-                                                    dataList.Add($"  Type: {value.TypeCode}, Value: {value.Value}");
+                                                    foreach (TypedValue value in xrec.Data)
+                                                    {
+                                                        string propertyName = GetPropertyName(value.TypeCode);
+                                                        dataList.Add($"  {propertyName}: {value.Value}");
+                                                    }
                                                 }
+                                                dataList.Add(""); // 空行を追加
                                             }
-                                            dataList.Add("");
                                         }
                                     }
                                 }
@@ -91,16 +77,21 @@ namespace PropertySetViewer
                         }
 
                         // XData を確認
-                        ResultBuffer xdata = entity.GetXDataForApplication("CIVIL");
-                        if (xdata != null)
+                        string[] appNames = new string[] { "CIVIL", "CIVILDATA", "PROPERTYSETS" };
+                        foreach (string appName in appNames)
                         {
-                            dataFound = true;
-                            dataList.Add("XData:");
-                            foreach (TypedValue value in xdata)
+                            ResultBuffer xdata = entity.GetXDataForApplication(appName);
+                            if (xdata != null)
                             {
-                                dataList.Add($"  Type: {value.TypeCode}, Value: {value.Value}");
+                                dataFound = true;
+                                dataList.Add($"XData ({appName}):");
+                                foreach (TypedValue value in xdata)
+                                {
+                                    string propertyName = GetPropertyName(value.TypeCode);
+                                    dataList.Add($"  {propertyName}: {value.Value}");
+                                }
+                                dataList.Add("");
                             }
-                            dataList.Add("");
                         }
 
                         if (!dataFound)
@@ -108,17 +99,33 @@ namespace PropertySetViewer
                             dataList.Add("このオブジェクトには施工情報の拡張データ（プロパティセット、拡張辞書、XData）が見つかりませんでした。");
                         }
 
+                        // プロパティ名を取得するヘルパーメソッド
+                        string GetPropertyName(int typeCode)
+                        {
+                            switch (typeCode)
+                            {
+                                case 1: return "改良住番号";
+                                case 2: return "設計統芯位置";
+                                case 3: return "施工実績";
+                                case 4: return "コラム番号";
+                                case 5: return "施工時間";
+                                case 6: return "区間開始深さ";
+                                case 7: return "区間終了深さ";
+                                default: return $"プロパティ{typeCode}";
+                            }
+                        }
+
                         // GUIを表示
                         PropertySetForm form = new PropertySetForm(dataList);
                         Application.ShowModalDialog(form);
-                    }
 
-                    tr.Commit();
+                        tr.Commit();
+                    }
                 }
-            }
-            catch (System.Exception ex)
-            {
-                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}\n拡張データの取得に失敗しました。");
+                catch (System.Exception ex)
+                {
+                    ed.WriteMessage($"\nエラーが発生しました: {ex.Message}\n拡張データの取得に失敗しました。");
+                }
             }
         }
     }
