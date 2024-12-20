@@ -2,6 +2,7 @@
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
+using Autodesk.Civil.DatabaseServices;
 using System.Collections.Generic;
 using System.Xml.Linq;
 
@@ -35,17 +36,68 @@ namespace PropertySetViewer
                     Entity entity = tr.GetObject(entityResult.ObjectId, OpenMode.ForRead) as Entity;
                     if (entity != null)
                     {
-                        ResultBuffer xdata = entity.GetXDataForApplication("AcDb");
                         List<string> dataList = new List<string>();
+                        bool dataFound = false;
 
-                        if (xdata != null)
+                        // Civil3D のプロパティセットを確認
+                        if (PropertySetManager.HasPropertySets(entity))
                         {
-                            foreach (TypedValue value in xdata)
+                            dataFound = true;
+                            var propertySets = PropertySetManager.GetAllPropertySets(entity);
+                            foreach (var propertySet in propertySets)
                             {
-                                dataList.Add($"Type: {value.TypeCode}, Value: {value.Value}");
+                                dataList.Add($"プロパティセット: {propertySet.PropertySetDefinitionName}");
+                                foreach (var definition in propertySet.Definitions)
+                                {
+                                    var value = propertySet.GetPropertyValue(definition);
+                                    dataList.Add($"  {definition.Name}: {value}");
+                                }
+                                dataList.Add(""); // 空行を追加して見やすくする
                             }
                         }
-                        else
+
+                        // 拡張辞書を確認
+                        ObjectId extDictId = entity.ExtensionDictionary;
+                        if (!extDictId.IsNull)
+                        {
+                            using (DBDictionary extDict = tr.GetObject(extDictId, OpenMode.ForRead) as DBDictionary)
+                            {
+                                if (extDict != null)
+                                {
+                                    foreach (DBDictionaryEntry entry in extDict)
+                                    {
+                                        using (DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                                        {
+                                            dataFound = true;
+                                            dataList.Add($"拡張辞書エントリ: {entry.Key}");
+                                            if (obj is Xrecord xrec)
+                                            {
+                                                foreach (TypedValue value in xrec.Data)
+                                                {
+                                                    dataList.Add($"  Type: {value.TypeCode}, Value: {value.Value}");
+                                                }
+                                            }
+                                            dataList.Add("");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // XData を確認
+                        ResultBuffer xdata = entity.GetXDataForApplication("CIVIL");
+                        if (xdata != null)
+                        {
+                            dataFound = true;
+                            dataList.Add("XData:");
+                            foreach (TypedValue value in xdata)
+                            {
+                                dataList.Add($"  Type: {value.TypeCode}, Value: {value.Value}");
+                            }
+                            dataList.Add("");
+                        }
+
+                        if (!dataFound)
                         {
                             dataList.Add("このオブジェクトには拡張データがありません。");
                         }
