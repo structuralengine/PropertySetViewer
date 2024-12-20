@@ -3,9 +3,7 @@ using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
 using Autodesk.Civil.DatabaseServices;
-using Autodesk.Civil.Land.DatabaseServices;
 using Autodesk.Civil.ApplicationServices;
-using Autodesk.Civil.Settings;
 using System.Collections.Generic;
 using System.Xml.Linq;
 
@@ -43,9 +41,9 @@ namespace PropertySetViewer
                         bool dataFound = false;
 
                         // Civil3D のプロパティセットを確認
-                        if (PropertySetManager.HasPropertySets(entity))
+                        if (Autodesk.Civil.DatabaseServices.PropertySetManager.HasPropertySets(entity))
                         {
-                            var propertySets = PropertySetManager.GetAllPropertySets(entity);
+                            var propertySets = Autodesk.Civil.DatabaseServices.PropertySetManager.GetAllPropertySets(entity);
                             foreach (var propertySet in propertySets)
                             {
                                 // 特定のプロパティセットを探す
