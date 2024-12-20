@@ -18,12 +18,10 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>C:\ProgramData\Autodesk\ApplicationPlugins\PropertySetViewer\</OutputPath>
+    <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <StartAction>Program</StartAction>
-    <StartProgram>C:\Program Files\Autodesk\AutoCAD 2024\acad.exe</StartProgram>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,28 +33,16 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="accoremgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2024\accoremgd.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\accoremgd.dll</HintPath>
     </Reference>
     <Reference Include="acdbmgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2024\acdbmgd.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\acdbmgd.dll</HintPath>
     </Reference>
     <Reference Include="acmgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2024\acmgd.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\acmgd.dll</HintPath>
     </Reference>
     <Reference Include="AcWindows">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2024\AcWindows.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="AecBaseMgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2024\AecBaseMgd.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="AeccDbMgd">
-      <HintPath>C:\Program Files\Autodesk\AutoCAD 2024\C3D\AeccDbMgd.dll</HintPath>
-      <Private>False</Private>
+      <HintPath>..\..\..\..\..\Program Files\Autodesk\AutoCAD 2024\AcWindows.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -85,10 +71,4 @@
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>
-      xcopy "$(TargetDir)*.*" "$(TargetDir)..\*.*" /Y /I
-      if not exist "$(TargetDir)..\..\PackageContents.xml" xcopy "$(ProjectDir)PackageContents.xml" "$(TargetDir)..\..\*.*" /Y /I
-    </PostBuildEvent>
-  </PropertyGroup>
 </Project>
