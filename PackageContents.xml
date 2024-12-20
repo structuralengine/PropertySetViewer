@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ApplicationPackage SchemaVersion="1.0"
+    ProductCode="PropertySetViewer"
+    Name="Property Set Viewer"
+    Description="View Property Sets and Extended Data for Civil3D Objects"
+    Author="User"
+    AppVersion="1.0.0"
+    >
+    <CompanyDetails Name="User Company" />
+    <Components Description="Property Set Viewer Plugin">
+        <RuntimeRequirements OS="Win64" Platform="AutoCAD" SeriesMin="R24.0" SeriesMax="R24.9"/>
+        <ComponentEntry AppName="PropertySetViewer"
+            ModuleName="./PropertySetViewer.dll"
+            AppDescription="Property Set Viewer for Civil3D Objects"
+            LoadOnCommandInvocation="True"
+            LoadOnAutoCADStartup="True">
+        </ComponentEntry>
+    </Components>
+</ApplicationPackage>
