@@ -4,6 +4,7 @@ using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 [assembly: CommandClass(typeof(PropertySetViewer.PropertySetViewer))]
 
@@ -127,10 +128,10 @@ namespace PropertySetViewer
                         tr.Commit();
                     }
                 }
-                catch (System.Exception ex)
-                {
-                    ed.WriteMessage($"\nエラーが発生しました: {ex.Message}\n拡張データの取得に失敗しました。");
-                }
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}\n拡張データの取得に失敗しました。");
             }
         }
     }
