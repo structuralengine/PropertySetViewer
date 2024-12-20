@@ -42,17 +42,22 @@ namespace PropertySetViewer
                         // Civil3D のプロパティセットを確認
                         if (PropertySetManager.HasPropertySets(entity))
                         {
-                            dataFound = true;
                             var propertySets = PropertySetManager.GetAllPropertySets(entity);
                             foreach (var propertySet in propertySets)
                             {
-                                dataList.Add($"プロパティセット: {propertySet.PropertySetDefinitionName}");
-                                foreach (var definition in propertySet.Definitions)
+                                // 特定のプロパティセットを探す
+                                if (propertySet.PropertySetDefinitionName == "施工情報(一覧表)" ||
+                                    propertySet.PropertySetDefinitionName == "施工情報(個別)")
                                 {
-                                    var value = propertySet.GetPropertyValue(definition);
-                                    dataList.Add($"  {definition.Name}: {value}");
+                                    dataFound = true;
+                                    dataList.Add($"プロパティセット: {propertySet.PropertySetDefinitionName}");
+                                    foreach (var definition in propertySet.Definitions)
+                                    {
+                                        var value = propertySet.GetPropertyValue(definition);
+                                        dataList.Add($"  {definition.Name}: {value}");
+                                    }
+                                    dataList.Add(""); // 空行を追加して見やすくする
                                 }
-                                dataList.Add(""); // 空行を追加して見やすくする
                             }
                         }
 
@@ -99,7 +104,7 @@ namespace PropertySetViewer
 
                         if (!dataFound)
                         {
-                            dataList.Add("このオブジェクトには拡張データがありません。");
+                            dataList.Add("このオブジェクトには施工情報の拡張データ（プロパティセット、拡張辞書、XData）が見つかりませんでした。");
                         }
 
                         // GUIを表示
@@ -112,7 +117,7 @@ namespace PropertySetViewer
             }
             catch (System.Exception ex)
             {
-                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}");
+                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}\n拡張データの取得に失敗しました。");
             }
         }
     }
