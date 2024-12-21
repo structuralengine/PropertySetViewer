@@ -222,7 +222,8 @@ namespace PropertySetViewer
                             dataList.Add("\nデバッグ情報:");
                             dataList.Add($"オブジェクトタイプ: {entity.GetType().Name}");
                             dataList.Add($"拡張辞書ID: {entity.ExtensionDictionary}");
-                            dataList.Add($"XData アプリケーション名: {string.Join(", ", entity.GetXDataApplications()?.Select(x => x) ?? new string[] { "なし" })}");
+                            var xdataApps = appNames.Where(appName => entity.GetXDataForApplication(appName) != null);
+                            dataList.Add($"XData アプリケーション名: {string.Join(", ", xdataApps.Any() ? xdataApps : new string[] { "なし" })}");
                         }
 
                         // GUIを表示
