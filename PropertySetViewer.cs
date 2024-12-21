@@ -5,6 +5,7 @@ using Autodesk.AutoCAD.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Exception = System.Exception;
 
 [assembly: CommandClass(typeof(PropertySetViewer.PropertySetViewer))]
 
