@@ -68,7 +68,19 @@ namespace PropertySetViewer
                             {
                                 try
                                 {
-                                    // Try to decode as Shift-JIS first
+                                    // Try UTF-8 first
+                                    string text = System.Text.Encoding.UTF8.GetString(bytes);
+                                    if (!string.IsNullOrWhiteSpace(text) && text.All(c => !char.IsControl(c) || c == '\n' || c == '\r'))
+                                    {
+                                        values.Add(text);
+                                        continue;
+                                    }
+                                }
+                                catch { }
+
+                                try
+                                {
+                                    // Try Shift-JIS if UTF-8 fails
                                     string text = System.Text.Encoding.GetEncoding("Shift-JIS").GetString(bytes);
                                     if (!string.IsNullOrWhiteSpace(text) && text.All(c => !char.IsControl(c) || c == '\n' || c == '\r'))
                                     {
@@ -78,8 +90,8 @@ namespace PropertySetViewer
                                 }
                                 catch { }
 
-                                // If text decoding fails, show as hex
-                                values.Add($"バイナリデータ: {BitConverter.ToString(bytes)}");
+                                // If text decoding fails, show improved hex representation
+                                values.Add($"バイナリデータ: {BitConverter.ToString(bytes).Replace("-", " ")}");
                             }
                             continue;
                         }
@@ -187,7 +199,7 @@ namespace PropertySetViewer
                         ProcessExtensionDictionary(entity, tr, dataList, ref dataFound);
 
                         // XData を確認
-                        string[] appNames = new string[] { "CIVIL", "CIVILDATA", "PROPERTYSETS" };
+                        string[] appNames = new string[] { "CIVIL", "CIVILDATA", "PROPERTYSETS", "CIVIL3D", "C3D", "AEC" };
                         foreach (string appName in appNames)
                         {
                             ResultBuffer xdata = entity.GetXDataForApplication(appName);
@@ -207,6 +219,10 @@ namespace PropertySetViewer
                         if (!dataFound)
                         {
                             dataList.Add("このオブジェクトには施工情報の拡張データ（プロパティセット、拡張辞書、XData）が見つかりませんでした。");
+                            dataList.Add("\nデバッグ情報:");
+                            dataList.Add($"オブジェクトタイプ: {entity.GetType().Name}");
+                            dataList.Add($"拡張辞書ID: {entity.ExtensionDictionary}");
+                            dataList.Add($"XData アプリケーション名: {string.Join(", ", entity.GetXDataApplications()?.Select(x => x) ?? new string[] { "なし" })}");
                         }
 
                         // GUIを表示
@@ -219,7 +235,9 @@ namespace PropertySetViewer
             }
             catch (System.Exception ex)
             {
-                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}\n拡張データの取得に失敗しました。");
+                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}");
+                ed.WriteMessage($"\nスタックトレース: {ex.StackTrace}");
+                ed.WriteMessage("\n拡張データの取得に失敗しました。");
             }
         }
 
