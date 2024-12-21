@@ -42,7 +42,7 @@ namespace PropertySetViewer
                         return value.Value?.ToString() ?? "null";
                 }
             }
-            catch (Exception ex)
+            catch (System.Exception ex)
             {
                 return $"デコードエラー: {ex.Message}";
             }
@@ -196,7 +196,8 @@ namespace PropertySetViewer
                                 dataList.Add($"XData ({appName}):");
                                 foreach (TypedValue value in xdata)
                                 {
-                                    ProcessXrecordData(new Xrecord { Data = new TypedValue[] { value } }, dataList);
+                                    var rb = new ResultBuffer(new TypedValue[] { value });
+                                    ProcessXrecordData(new Xrecord { Data = rb }, dataList);
                                 }
                                 dataList.Add("");
                             }
