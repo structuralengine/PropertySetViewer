@@ -58,6 +58,10 @@
       <HintPath>..\..\..\..\Program Files\Autodesk\Civil 3D 2024 Object Enabler\AeccDbMgd.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Autodesk.Civil.DatabaseServices">
+      <HintPath>C:\Program Files\Autodesk\Civil 3D 2024\Autodesk.Civil.DatabaseServices.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />

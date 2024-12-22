@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
+using Autodesk.Civil.DatabaseServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -489,12 +490,44 @@ namespace PropertySetViewer
                     {
                         var builder = new System.Text.StringBuilder();
                         builder.AppendLine("{");
+
+                        // Basic entity info
                         builder.AppendLine($"  \"EntityInfo\": {{");
                         builder.AppendLine($"    \"Type\": \"{entity.GetType().Name}\",");
                         builder.AppendLine($"    \"Id\": \"{entity.ObjectId}\",");
                         builder.AppendLine($"    \"Layer\": \"{entity.Layer}\"");
                         builder.AppendLine("  },");
 
+                        // PropertySet data using PropertySetManager
+                        builder.AppendLine("  \"PropertySets\": {");
+                        try
+                        {
+                            var propertySets = PropertySetManager.GetPropertySets(entity);
+                            if (propertySets != null && propertySets.Count > 0)
+                            {
+                                foreach (var propertySet in propertySets)
+                                {
+                                    builder.AppendLine($"    \"{propertySet.Name}\": {{");
+                                    foreach (var property in propertySet)
+                                    {
+                                        var value = property.Value?.ToString() ?? "null";
+                                        builder.AppendLine($"      \"{property.Name}\": \"{value}\",");
+                                    }
+                                    builder.AppendLine("    },");
+                                }
+                            }
+                            else
+                            {
+                                builder.AppendLine("    \"メッセージ\": \"プロパティセットが見つかりませんでした。\"");
+                            }
+                        }
+                        catch (System.Exception ex)
+                        {
+                            builder.AppendLine($"    \"エラー\": \"プロパティセットの取得中にエラーが発生しました: {ex.Message}\"");
+                        }
+                        builder.AppendLine("  },");
+
+                        // Extension Dictionary data
                         if (!entity.ExtensionDictionary.IsNull)
                         {
                             builder.AppendLine("  \"ExtensionData\": {");
@@ -505,8 +538,8 @@ namespace PropertySetViewer
                             builder.AppendLine("  },");
                         }
 
+                        // XData
                         builder.AppendLine("  \"XData\": {");
-
                         string[] appNames = { "CIVIL", "CIVILDATA", "PROPERTYSETS", "CIVIL3D", "C3D", "AEC" };
                         foreach (string appName in appNames)
                         {
@@ -521,7 +554,6 @@ namespace PropertySetViewer
                                 builder.AppendLine("    ],");
                             }
                         }
-
                         builder.AppendLine("  }");
                         builder.AppendLine("}");
 
@@ -543,5 +575,3 @@ namespace PropertySetViewer
                 ed.WriteMessage($"\nスタックトレース: {ex.StackTrace}");
             }
         }
-    }
-}
