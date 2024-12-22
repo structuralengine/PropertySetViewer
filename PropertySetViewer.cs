@@ -2,6 +2,7 @@ using Autodesk.AutoCAD.ApplicationServices;
 using Autodesk.AutoCAD.DatabaseServices;
 using Autodesk.AutoCAD.EditorInput;
 using Autodesk.AutoCAD.Runtime;
+using Autodesk.Aec.DatabaseServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -254,7 +255,7 @@ namespace PropertySetViewer
                         foreach (DBDictionaryEntry entry in extDict)
                         {
                             bool isRelevantEntry = propertySetNames.Any(name =>
-                                entry.Key.Contains(name, StringComparison.OrdinalIgnoreCase));
+                                entry.Key.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
 
                             if (isRelevantEntry)
                             {
@@ -435,7 +436,7 @@ namespace PropertySetViewer
                     {
                         builder.Append(SerializeObjectData(entryObj, tr, indent + 3));
                     }
-                    builder.AppendLine($"{padding}    }}},");
+                    builder.AppendLine($"{padding}    }}}},");
                 }
                 builder.AppendLine($"{padding}  }}");
             }
