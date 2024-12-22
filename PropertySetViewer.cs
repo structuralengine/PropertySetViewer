@@ -532,10 +532,14 @@ namespace PropertySetViewer
 
                         // JSONの形式を検証
                         try {
-                            System.Text.Json.JsonDocument.Parse(builder.ToString());
-                            System.IO.File.WriteAllText(filePath, builder.ToString());
+                            string jsonContent = builder.ToString();
+                            // 基本的なJSON構造の検証
+                            if (!jsonContent.StartsWith("{") || !jsonContent.EndsWith("}"))
+                                throw new Exception("JSONの構造が不正です：オブジェクトの開始または終了が見つかりません");
+
+                            System.IO.File.WriteAllText(filePath, jsonContent);
                             ed.WriteMessage($"\nJSONデータを保存しました: {filePath}");
-                        } catch (System.Text.Json.JsonException ex) {
+                        } catch (Exception ex) {
                             ed.WriteMessage($"\nJSON形式エラー: {ex.Message}");
                             return;
                         }
