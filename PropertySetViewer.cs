@@ -127,6 +127,95 @@ namespace PropertySetViewer
             }
         }
 
+        private void ProcessDictionaryObject(DBObject dictObj, List<string> dataList)
+        {
+            if (dictObj == null) return;
+
+            try
+            {
+                // プロパティセットの内容を解析
+                if (dictObj is PropertySet propSet)
+                {
+                    foreach (PropertySetProperty prop in propSet)
+                    {
+                        string value = prop.PropertyValue?.ToString() ?? "null";
+                        try
+                        {
+                            // バイナリデータの場合は特別な処理を試みる
+                            if (prop.PropertyValue is byte[] bytes)
+                            {
+                                value = ProcessBinaryData(bytes);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            value = $"値の変換エラー: {ex.Message}";
+                        }
+                        dataList.Add($"  {prop.PropertyName}: {value}");
+                    }
+                }
+                else if (dictObj is Xrecord xrec)
+                {
+                    ProcessXrecordData(xrec, dataList);
+                }
+                else
+                {
+                    // その他の辞書オブジェクトの情報を表示
+                    dataList.Add($"  タイプ: {dictObj.GetType().Name}");
+                    dataList.Add($"  オブジェクトID: {dictObj.ObjectId}");
+
+                    // オブジェクトのプロパティを取得して表示
+                    var props = dictObj.GetType().GetProperties()
+                        .Where(p => p.CanRead && !p.Name.Equals("ObjectId") && !p.Name.Equals("Handle"));
+
+                    foreach (var prop in props)
+                    {
+                        try
+                        {
+                            var value = prop.GetValue(dictObj);
+                            if (value != null)
+                            {
+                                dataList.Add($"    {prop.Name}: {value}");
+                            }
+                        }
+                        catch { } // プロパティの読み取りに失敗した場合はスキップ
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                dataList.Add($"  辞書オブジェクト処理エラー: {ex.Message}");
+                dataList.Add($"  スタックトレース: {ex.StackTrace}");
+            }
+        }
+
+        private string ProcessBinaryData(byte[] bytes)
+        {
+            try
+            {
+                // UTF-8でのデコードを試みる
+                string utf8Text = System.Text.Encoding.UTF8.GetString(bytes);
+                if (!string.IsNullOrWhiteSpace(utf8Text) && utf8Text.All(c => !char.IsControl(c) || c == '\n' || c == '\r'))
+                {
+                    return utf8Text;
+                }
+
+                // Shift-JISでのデコードを試みる
+                string sjisText = System.Text.Encoding.GetEncoding("Shift-JIS").GetString(bytes);
+                if (!string.IsNullOrWhiteSpace(sjisText) && sjisText.All(c => !char.IsControl(c) || c == '\n' || c == '\r'))
+                {
+                    return sjisText;
+                }
+
+                // バイナリデータとして表示
+                return $"バイナリデータ: {BitConverter.ToString(bytes).Replace("-", " ")}";
+            }
+            catch (Exception ex)
+            {
+                return $"バイナリデータ処理エラー: {ex.Message}";
+            }
+        }
+
         private void ProcessExtensionDictionary(Entity entity, Transaction tr, List<string> dataList, ref bool dataFound)
         {
             ObjectId extDictId = entity.ExtensionDictionary;
@@ -141,11 +230,33 @@ namespace PropertySetViewer
                 {
                     if (extDict != null)
                     {
-                        string[] propertySetNames = new string[] { "施工情報(一覧表)", "施工情報(個別)" };
+                        // Civil3D、AEC関連のプロパティセット名を拡張
+                        string[] propertySetNames = new string[] {
+                            "施工情報(一覧表)",
+                            "施工情報(個別)",
+                            "CIVIL",
+                            "CIVILDATA",
+                            "PROPERTYSETS",
+                            "CIVIL3D",
+                            "C3D",
+                            "AEC"
+                        };
 
+                        // すべての辞書エントリを列挙（デバッグ用）
+                        var allEntries = new List<string>();
                         foreach (DBDictionaryEntry entry in extDict)
                         {
-                            if (propertySetNames.Contains(entry.Key))
+                            allEntries.Add(entry.Key);
+                        }
+                        dataList.Add($"利用可能な辞書エントリ: {string.Join(", ", allEntries)}");
+
+                        // プロパティセットの処理
+                        foreach (DBDictionaryEntry entry in extDict)
+                        {
+                            bool isRelevantEntry = propertySetNames.Any(name =>
+                                entry.Key.Contains(name, StringComparison.OrdinalIgnoreCase));
+
+                            if (isRelevantEntry)
                             {
                                 using (DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
                                 {
@@ -154,6 +265,10 @@ namespace PropertySetViewer
                                     if (obj is Xrecord xrec)
                                     {
                                         ProcessXrecordData(xrec, dataList);
+                                    }
+                                    else
+                                    {
+                                        ProcessDictionaryObject(obj, dataList);
                                     }
                                     dataList.Add("");
                                 }
@@ -165,6 +280,7 @@ namespace PropertySetViewer
             catch (Exception ex)
             {
                 dataList.Add($"拡張ディクショナリの処理中にエラーが発生しました: {ex.Message}");
+                dataList.Add($"スタックトレース: {ex.StackTrace}");
             }
         }
 
@@ -222,6 +338,38 @@ namespace PropertySetViewer
                             dataList.Add("\nデバッグ情報:");
                             dataList.Add($"オブジェクトタイプ: {entity.GetType().Name}");
                             dataList.Add($"拡張辞書ID: {entity.ExtensionDictionary}");
+
+                            // 拡張辞書エントリの詳細情報を追加
+                            if (entity.ExtensionDictionary != ObjectId.Null)
+                            {
+                                try
+                                {
+                                    using (DBDictionary extDict = tr.GetObject(entity.ExtensionDictionary, OpenMode.ForRead) as DBDictionary)
+                                    {
+                                        if (extDict != null)
+                                        {
+                                            var entries = new List<string>();
+                                            foreach (DBDictionaryEntry entry in extDict)
+                                            {
+                                                using (DBObject obj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                                                {
+                                                    entries.Add($"{entry.Key}（タイプ: {obj.GetType().Name}）");
+                                                }
+                                            }
+                                            dataList.Add($"拡張辞書エントリ: {string.Join(", ", entries)}");
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    dataList.Add($"拡張辞書エントリの取得エラー: {ex.Message}");
+                                }
+                            }
+                            else
+                            {
+                                dataList.Add("拡張辞書エントリ: なし");
+                            }
+
                             var xdataApps = appNames.Where(appName => entity.GetXDataForApplication(appName) != null);
                             dataList.Add($"XData アプリケーション名: {string.Join(", ", xdataApps.Any() ? xdataApps : new string[] { "なし" })}");
                         }
@@ -265,6 +413,128 @@ namespace PropertySetViewer
                 case 11: return "設計統芯位置y";
                 case 1001: return "施工データ";
                 default: return $"プロパティ{typeCode}";
+            }
+        }
+
+        private string SerializeObjectData(DBObject obj, Transaction tr, int indent = 0)
+        {
+            var builder = new System.Text.StringBuilder();
+            string padding = new string(' ', indent * 2);
+
+            builder.AppendLine($"{padding}{{");
+            builder.AppendLine($"{padding}  \"Type\": \"{obj.GetType().Name}\",");
+            builder.AppendLine($"{padding}  \"ObjectId\": \"{obj.ObjectId}\",");
+
+            if (obj is DBDictionary dict)
+            {
+                builder.AppendLine($"{padding}  \"Entries\": {{");
+                foreach (DBDictionaryEntry entry in dict)
+                {
+                    builder.AppendLine($"{padding}    \"{entry.Key}\": {{");
+                    using (DBObject entryObj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                    {
+                        builder.Append(SerializeObjectData(entryObj, tr, indent + 3));
+                    }
+                    builder.AppendLine($"{padding}    }}},");
+                }
+                builder.AppendLine($"{padding}  }}");
+            }
+            else if (obj is Xrecord xrec)
+            {
+                builder.AppendLine($"{padding}  \"Data\": [");
+                foreach (TypedValue value in xrec.Data)
+                {
+                    builder.AppendLine($"{padding}    {{");
+                    builder.AppendLine($"{padding}      \"TypeCode\": {value.TypeCode},");
+                    builder.AppendLine($"{padding}      \"TypeName\": \"{GetPropertyName(value.TypeCode)}\",");
+                    builder.AppendLine($"{padding}      \"Value\": \"{DecodeTypedValue(value)}\"");
+                    builder.AppendLine($"{padding}    }},");
+                }
+                builder.AppendLine($"{padding}  ]");
+            }
+
+            builder.AppendLine($"{padding}}}");
+            return builder.ToString();
+        }
+
+        [CommandMethod("ExportPropertySetData")]
+        public void ExportPropertySetData()
+        {
+            Document doc = Application.DocumentManager.MdiActiveDocument;
+            Editor ed = doc.Editor;
+
+            try
+            {
+                PromptEntityOptions entityOptions = new PromptEntityOptions("\n拡張データをエクスポートするオブジェクトを選択してください: ");
+                PromptEntityResult entityResult = ed.GetEntity(entityOptions);
+
+                if (entityResult.Status != PromptStatus.OK)
+                {
+                    ed.WriteMessage("\nオブジェクトの選択がキャンセルされました。");
+                    return;
+                }
+
+                using (Transaction tr = doc.Database.TransactionManager.StartTransaction())
+                {
+                    Entity entity = tr.GetObject(entityResult.ObjectId, OpenMode.ForRead) as Entity;
+                    if (entity != null)
+                    {
+                        var builder = new System.Text.StringBuilder();
+                        builder.AppendLine("{");
+                        builder.AppendLine($"  \"EntityType\": \"{entity.GetType().Name}\",");
+                        builder.AppendLine($"  \"ExtensionDictionary\": {{");
+
+                        if (!entity.ExtensionDictionary.IsNull)
+                        {
+                            using (DBDictionary extDict = tr.GetObject(entity.ExtensionDictionary, OpenMode.ForRead) as DBDictionary)
+                            {
+                                builder.Append(SerializeObjectData(extDict, tr, 2));
+                            }
+                        }
+
+                        builder.AppendLine("  },");
+                        builder.AppendLine("  \"XData\": {");
+
+                        string[] appNames = { "CIVIL", "CIVILDATA", "PROPERTYSETS", "CIVIL3D", "C3D", "AEC" };
+                        foreach (string appName in appNames)
+                        {
+                            ResultBuffer xdata = entity.GetXDataForApplication(appName);
+                            if (xdata != null)
+                            {
+                                builder.AppendLine($"    \"{appName}\": {{");
+                                builder.AppendLine("      \"Data\": [");
+                                foreach (TypedValue value in xdata)
+                                {
+                                    builder.AppendLine("        {");
+                                    builder.AppendLine($"          \"TypeCode\": {value.TypeCode},");
+                                    builder.AppendLine($"          \"TypeName\": \"{GetPropertyName(value.TypeCode)}\",");
+                                    builder.AppendLine($"          \"Value\": \"{DecodeTypedValue(value)}\"");
+                                    builder.AppendLine("        },");
+                                }
+                                builder.AppendLine("      ]");
+                                builder.AppendLine("    },");
+                            }
+                        }
+
+                        builder.AppendLine("  }");
+                        builder.AppendLine("}");
+
+                        string fileName = $"PropertySetData_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+                        string filePath = System.IO.Path.Combine(
+                            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                            fileName
+                        );
+                        System.IO.File.WriteAllText(filePath, builder.ToString());
+
+                        ed.WriteMessage($"\nデータを保存しました: {filePath}");
+                    }
+                    tr.Commit();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                ed.WriteMessage($"\nエラーが発生しました: {ex.Message}");
+                ed.WriteMessage($"\nスタックトレース: {ex.StackTrace}");
             }
         }
     }
