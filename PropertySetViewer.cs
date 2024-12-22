@@ -420,42 +420,48 @@ namespace PropertySetViewer
         private string SerializeObjectData(DBObject obj, Transaction tr, int indent = 0)
         {
             var builder = new System.Text.StringBuilder();
-            string padding = new string(' ', indent * 2);
-
-            builder.AppendLine($"{padding}{{");
-            builder.AppendLine($"{padding}  \"Type\": \"{obj.GetType().Name}\",");
-            builder.AppendLine($"{padding}  \"ObjectId\": \"{obj.ObjectId}\",");
-            builder.AppendLine($"{padding}  \"Handle\": \"{obj.Handle}\",");
+            builder.AppendLine("{");
+            builder.AppendLine($"  \"Type\": \"{obj.GetType().Name}\",");
+            builder.AppendLine($"  \"ObjectId\": \"{obj.ObjectId}\",");
+            builder.AppendLine($"  \"RawData\": {{");
 
             if (obj is DBDictionary dict)
             {
-                builder.AppendLine($"{padding}  \"Entries\": {{");
                 foreach (DBDictionaryEntry entry in dict)
                 {
-                    builder.AppendLine($"{padding}    \"{entry.Key}\": {{");
+                    builder.AppendLine($"    \"{entry.Key}\": {{");
                     using (DBObject entryObj = tr.GetObject(entry.Value, OpenMode.ForRead))
                     {
-                        builder.Append(SerializeObjectData(entryObj, tr, indent + 3));
+                        if (entryObj is Xrecord xrec)
+                        {
+                            builder.AppendLine("      \"Values\": [");
+                            foreach (TypedValue value in xrec.Data)
+                            {
+                                builder.AppendLine($"        {{\"Code\": {value.TypeCode}, \"Value\": \"{value.Value}\"}},");
+                            }
+                            builder.AppendLine("      ]");
+                        }
+                        else
+                        {
+                            builder.AppendLine($"      \"Type\": \"{entryObj.GetType().Name}\",");
+                            builder.AppendLine($"      \"ObjectId\": \"{entryObj.ObjectId}\"");
+                        }
                     }
-                    builder.AppendLine($"{padding}    }}}},");
+                    builder.AppendLine("    },");
                 }
-                builder.AppendLine($"{padding}  }}");
             }
             else if (obj is Xrecord xrec)
             {
-                builder.AppendLine($"{padding}  \"Data\": [");
+                builder.AppendLine("    \"Values\": [");
                 foreach (TypedValue value in xrec.Data)
                 {
-                    builder.AppendLine($"{padding}    {{");
-                    builder.AppendLine($"{padding}      \"TypeCode\": {value.TypeCode},");
-                    builder.AppendLine($"{padding}      \"TypeName\": \"{GetPropertyName(value.TypeCode).Replace("\"", "\\\"")}\",");
-                    builder.AppendLine($"{padding}      \"Value\": \"{DecodeTypedValue(value).Replace("\"", "\\\"")}\"");
-                    builder.AppendLine($"{padding}    }},");
+                    builder.AppendLine($"      {{\"Code\": {value.TypeCode}, \"Value\": \"{value.Value}\"}},");
                 }
-                builder.AppendLine($"{padding}  ]");
+                builder.AppendLine("    ]");
             }
 
-            builder.AppendLine($"{padding}}}");
+            builder.AppendLine("  }");
+            builder.AppendLine("}");
             return builder.ToString();
         }
 
@@ -483,21 +489,22 @@ namespace PropertySetViewer
                     {
                         var builder = new System.Text.StringBuilder();
                         builder.AppendLine("{");
-                        builder.AppendLine($"  \"EntityType\": \"{entity.GetType().Name}\",");
-                        builder.AppendLine($"  \"EntityId\": \"{entity.ObjectId}\",");
-                        builder.AppendLine($"  \"Handle\": \"{entity.Handle}\",");
-                        builder.AppendLine($"  \"Layer\": \"{entity.Layer}\",");
-                        builder.AppendLine($"  \"ExtensionDictionary\": {{");
+                        builder.AppendLine($"  \"EntityInfo\": {{");
+                        builder.AppendLine($"    \"Type\": \"{entity.GetType().Name}\",");
+                        builder.AppendLine($"    \"Id\": \"{entity.ObjectId}\",");
+                        builder.AppendLine($"    \"Layer\": \"{entity.Layer}\"");
+                        builder.AppendLine("  },");
 
                         if (!entity.ExtensionDictionary.IsNull)
                         {
+                            builder.AppendLine("  \"ExtensionData\": {");
                             using (DBDictionary extDict = tr.GetObject(entity.ExtensionDictionary, OpenMode.ForRead) as DBDictionary)
                             {
-                                builder.Append(SerializeObjectData(extDict, tr, 2));
+                                builder.Append(SerializeObjectData(extDict, tr));
                             }
+                            builder.AppendLine("  },");
                         }
 
-                        builder.AppendLine("  },");
                         builder.AppendLine("  \"XData\": {");
 
                         string[] appNames = { "CIVIL", "CIVILDATA", "PROPERTYSETS", "CIVIL3D", "C3D", "AEC" };
@@ -506,18 +513,12 @@ namespace PropertySetViewer
                             ResultBuffer xdata = entity.GetXDataForApplication(appName);
                             if (xdata != null)
                             {
-                                builder.AppendLine($"    \"{appName}\": {{");
-                                builder.AppendLine("      \"Data\": [");
+                                builder.AppendLine($"    \"{appName}\": [");
                                 foreach (TypedValue value in xdata)
                                 {
-                                    builder.AppendLine("        {");
-                                    builder.AppendLine($"          \"TypeCode\": {value.TypeCode},");
-                                    builder.AppendLine($"          \"TypeName\": \"{GetPropertyName(value.TypeCode)}\",");
-                                    builder.AppendLine($"          \"Value\": \"{DecodeTypedValue(value)}\"");
-                                    builder.AppendLine("        },");
+                                    builder.AppendLine($"      {{\"Code\": {value.TypeCode}, \"Value\": \"{value.Value}\"}},");
                                 }
-                                builder.AppendLine("      ]");
-                                builder.AppendLine("    },");
+                                builder.AppendLine("    ],");
                             }
                         }
 
@@ -530,19 +531,8 @@ namespace PropertySetViewer
                             fileName
                         );
 
-                        // JSONの形式を検証
-                        try {
-                            string jsonContent = builder.ToString();
-                            // 基本的なJSON構造の検証
-                            if (!jsonContent.StartsWith("{") || !jsonContent.EndsWith("}"))
-                                throw new Exception("JSONの構造が不正です：オブジェクトの開始または終了が見つかりません");
-
-                            System.IO.File.WriteAllText(filePath, jsonContent);
-                            ed.WriteMessage($"\nJSONデータを保存しました: {filePath}");
-                        } catch (Exception ex) {
-                            ed.WriteMessage($"\nJSON形式エラー: {ex.Message}");
-                            return;
-                        }
+                        System.IO.File.WriteAllText(filePath, builder.ToString());
+                        ed.WriteMessage($"\nエンティティデータを保存しました: {filePath}");
                         tr.Commit();
                     }
                 }
