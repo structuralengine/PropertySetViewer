@@ -134,34 +134,13 @@ namespace PropertySetViewer
 
             try
             {
-                // プロパティセットの内容を解析
-                if (dictObj is PropertySet propSet)
-                {
-                    foreach (PropertySetProperty prop in propSet)
-                    {
-                        string value = prop.PropertyValue?.ToString() ?? "null";
-                        try
-                        {
-                            // バイナリデータの場合は特別な処理を試みる
-                            if (prop.PropertyValue is byte[] bytes)
-                            {
-                                value = ProcessBinaryData(bytes);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            value = $"値の変換エラー: {ex.Message}";
-                        }
-                        dataList.Add($"  {prop.PropertyName}: {value}");
-                    }
-                }
-                else if (dictObj is Xrecord xrec)
+                if (dictObj is Xrecord xrec)
                 {
                     ProcessXrecordData(xrec, dataList);
                 }
                 else
                 {
-                    // その他の辞書オブジェクトの情報を表示
+                    // オブジェクトの基本情報を表示
                     dataList.Add($"  タイプ: {dictObj.GetType().Name}");
                     dataList.Add($"  オブジェクトID: {dictObj.ObjectId}");
 
@@ -176,10 +155,32 @@ namespace PropertySetViewer
                             var value = prop.GetValue(dictObj);
                             if (value != null)
                             {
-                                dataList.Add($"    {prop.Name}: {value}");
+                                // バイナリデータの場合は特別な処理
+                                if (value is byte[] bytes)
+                                {
+                                    dataList.Add($"    {prop.Name}: {ProcessBinaryData(bytes)}");
+                                }
+                                else
+                                {
+                                    dataList.Add($"    {prop.Name}: {value}");
+                                }
                             }
                         }
                         catch { } // プロパティの読み取りに失敗した場合はスキップ
+                    }
+
+                    // オブジェクトが辞書を持っている場合は再帰的に処理
+                    if (dictObj is DBDictionary nestedDict)
+                    {
+                        dataList.Add("  ネストされた辞書エントリ:");
+                        foreach (DBDictionaryEntry entry in nestedDict)
+                        {
+                            using (DBObject entryObj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                            {
+                                dataList.Add($"    {entry.Key}:");
+                                ProcessDictionaryObject(entryObj, dataList);
+                            }
+                        }
                     }
                 }
             }
