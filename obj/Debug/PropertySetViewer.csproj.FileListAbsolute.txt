@@ -36,3 +36,9 @@ C:\Users\81806\Documents\PropertySetViewer\PropertySetViewer\bin\Debug\ja-JP\AcM
 C:\Users\81806\Documents\PropertySetViewer\PropertySetViewer\obj\Debug\Property.612C1A21.Up2Date
 C:\Users\81806\Documents\PropertySetViewer\PropertySetViewer\obj\Debug\PropertySetViewer.dll
 C:\Users\81806\Documents\PropertySetViewer\PropertySetViewer\obj\Debug\PropertySetViewer.pdb
+C:\Users\81806\Documents\PropertyViewer\obj\Debug\PropertySetViewer.csproj.AssemblyReference.cache
+C:\Users\81806\Documents\PropertyViewer\obj\Debug\PropertySetViewer.PropertySetForm.resources
+C:\Users\81806\Documents\PropertyViewer\obj\Debug\PropertySetViewer.csproj.GenerateResource.cache
+C:\Users\81806\Documents\PropertyViewer\obj\Debug\PropertySetViewer.csproj.CoreCompileInputs.cache
+C:\Users\81806\Documents\PropertyViewer\obj\Debug\PropertySetViewer.dll
+C:\Users\81806\Documents\PropertyViewer\obj\Debug\PropertySetViewer.pdb
