@@ -426,6 +426,7 @@ namespace PropertySetViewer
             builder.AppendLine($"{padding}{{");
             builder.AppendLine($"{padding}  \"Type\": \"{obj.GetType().Name}\",");
             builder.AppendLine($"{padding}  \"ObjectId\": \"{obj.ObjectId}\",");
+            builder.AppendLine($"{padding}  \"Handle\": \"{obj.Handle}\",");
 
             if (obj is DBDictionary dict)
             {
@@ -448,8 +449,8 @@ namespace PropertySetViewer
                 {
                     builder.AppendLine($"{padding}    {{");
                     builder.AppendLine($"{padding}      \"TypeCode\": {value.TypeCode},");
-                    builder.AppendLine($"{padding}      \"TypeName\": \"{GetPropertyName(value.TypeCode)}\",");
-                    builder.AppendLine($"{padding}      \"Value\": \"{DecodeTypedValue(value)}\"");
+                    builder.AppendLine($"{padding}      \"TypeName\": \"{GetPropertyName(value.TypeCode).Replace("\"", "\\\"")}\",");
+                    builder.AppendLine($"{padding}      \"Value\": \"{DecodeTypedValue(value).Replace("\"", "\\\"")}\"");
                     builder.AppendLine($"{padding}    }},");
                 }
                 builder.AppendLine($"{padding}  ]");
@@ -484,6 +485,9 @@ namespace PropertySetViewer
                         var builder = new System.Text.StringBuilder();
                         builder.AppendLine("{");
                         builder.AppendLine($"  \"EntityType\": \"{entity.GetType().Name}\",");
+                        builder.AppendLine($"  \"EntityId\": \"{entity.ObjectId}\",");
+                        builder.AppendLine($"  \"Handle\": \"{entity.Handle}\",");
+                        builder.AppendLine($"  \"Layer\": \"{entity.Layer}\",");
                         builder.AppendLine($"  \"ExtensionDictionary\": {{");
 
                         if (!entity.ExtensionDictionary.IsNull)
@@ -521,16 +525,23 @@ namespace PropertySetViewer
                         builder.AppendLine("  }");
                         builder.AppendLine("}");
 
-                        string fileName = $"PropertySetData_{DateTime.Now:yyyyMMdd_HHmmss}.txt";
+                        string fileName = $"PropertySetData_{DateTime.Now:yyyyMMdd_HHmmss}.json";
                         string filePath = System.IO.Path.Combine(
                             Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                             fileName
                         );
-                        System.IO.File.WriteAllText(filePath, builder.ToString());
 
-                        ed.WriteMessage($"\nデータを保存しました: {filePath}");
+                        // JSONの形式を検証
+                        try {
+                            System.Text.Json.JsonDocument.Parse(builder.ToString());
+                            System.IO.File.WriteAllText(filePath, builder.ToString());
+                            ed.WriteMessage($"\nJSONデータを保存しました: {filePath}");
+                        } catch (System.Text.Json.JsonException ex) {
+                            ed.WriteMessage($"\nJSON形式エラー: {ex.Message}");
+                            return;
+                        }
+                        tr.Commit();
                     }
-                    tr.Commit();
                 }
             }
             catch (System.Exception ex)
