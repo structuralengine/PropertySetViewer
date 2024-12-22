@@ -128,7 +128,7 @@ namespace PropertySetViewer
             }
         }
 
-        private void ProcessDictionaryObject(DBObject dictObj, List<string> dataList)
+        private void ProcessDictionaryObject(Autodesk.AutoCAD.DatabaseServices.DBObject dictObj, List<string> dataList, Transaction transaction)
         {
             if (dictObj == null) return;
 
@@ -175,10 +175,10 @@ namespace PropertySetViewer
                         dataList.Add("  ネストされた辞書エントリ:");
                         foreach (DBDictionaryEntry entry in nestedDict)
                         {
-                            using (DBObject entryObj = tr.GetObject(entry.Value, OpenMode.ForRead))
+                            using (DBObject entryObj = transaction.GetObject(entry.Value, OpenMode.ForRead))
                             {
                                 dataList.Add($"    {entry.Key}:");
-                                ProcessDictionaryObject(entryObj, dataList);
+                                ProcessDictionaryObject(entryObj, dataList, transaction);
                             }
                         }
                     }
@@ -270,7 +270,7 @@ namespace PropertySetViewer
                                     }
                                     else
                                     {
-                                        ProcessDictionaryObject(obj, dataList);
+                                        ProcessDictionaryObject(obj, dataList, tr);
                                     }
                                     dataList.Add("");
                                 }
